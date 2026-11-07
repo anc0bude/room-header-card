@@ -13,6 +13,8 @@
  *   - entity: binary_sensor.fenster_gross
  *     kind: window                             # window | door | roof
  *     name: Großes Fenster                     # optional
+ *     lock: lock.haustuer                      # optional: Schloss-Entität; Tür zu, aber nicht verriegelt -> orange Symbol Schloss offen
+ *     lock_icon: mdi:lock-open-variant         # optional
  * card:                                        # optional: darunter liegende Karte im selben Kasten
  *   type: entities
  *   entities: [...]
@@ -52,6 +54,7 @@ class RoomHeaderCard extends HTMLElement {
           .badge{display:flex;align-items:center;gap:4px;cursor:pointer;font-variant-numeric:tabular-nums;flex:none}
           .badge ha-icon{--mdc-icon-size:20px}
           .win{color:var(--error-color,#db4437)}
+          .win.unlocked{color:var(--warning-color,#ffa600)}
           .temp{color:var(--primary-text-color)}
           .temp.heating{color:var(--state-climate-heat-color,#e0702a)}
           .ac{color:var(--secondary-text-color)}
@@ -144,23 +147,27 @@ class RoomHeaderCard extends HTMLElement {
         this._acs.appendChild(el);
       }
     }
-    // Fenster: nur offene
-    const open = this._config.windows.filter((w) => {
-      const s = hass.states[w.entity]?.state;
-      return s === "on" || s === "open";
-    });
-    const key = open.map((w) => w.entity).join("|");
+    // Fenster/Türen: nur offene bzw. (Türen mit "lock") entriegelte
+    const isOn = (id) => { const s = id && hass.states[id]?.state; return s === "on" || s === "open"; };
+    const isUnlocked = (id) => { const s = id && hass.states[id]?.state; return s === "unlocked" || s === "unlocking" || s === "open" || s === "jammed" || s === "on"; };
+    const items = [];
+    for (const w of this._config.windows) {
+      if (isOn(w.entity)) items.push({ w, id: w.entity, mode: "open" });
+      else if (w.lock && isUnlocked(w.lock)) items.push({ w, id: w.lock, mode: "unlocked" });
+    }
+    const key = items.map((i) => i.id + ":" + i.mode).join("|");
     if (key !== this._winKey) {
       this._winKey = key;
       this._wins.innerHTML = "";
-      for (const w of open) {
+      for (const { w, id, mode } of items) {
         const el = document.createElement("span");
-        el.className = "badge win";
-        el.title = w.name || hass.states[w.entity]?.attributes.friendly_name || w.entity;
+        el.className = "badge win" + (mode === "unlocked" ? " unlocked" : "");
+        const label = w.name || hass.states[w.entity]?.attributes.friendly_name || hass.states[id]?.attributes.friendly_name || id;
+        el.title = mode === "unlocked" ? label + " (nicht verriegelt)" : label;
         const ic = document.createElement("ha-icon");
-        ic.setAttribute("icon", w.icon || KIND_ICON[w.kind] || KIND_ICON.window);
+        ic.setAttribute("icon", mode === "unlocked" ? (w.lock_icon || "mdi:lock-open-variant") : (w.icon || KIND_ICON[w.kind] || KIND_ICON.window));
         el.appendChild(ic);
-        el.addEventListener("click", () => this._moreInfo(w.entity));
+        el.addEventListener("click", () => this._moreInfo(id));
         this._wins.appendChild(el);
       }
     }

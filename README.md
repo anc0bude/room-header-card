@@ -28,6 +28,9 @@ windows:                                   # bis zu 4
     name: Großes Fenster
   - entity: binary_sensor.terrassentuer
     kind: door
+  - entity: binary_sensor.haustuer_offen   # Tür offen/zu
+    lock: lock.haustuer                    # zusätzlich: verriegelt?
+    kind: door
 card:                                      # optional: Karte im selben Kasten
   type: entities
   entities:
@@ -42,10 +45,12 @@ card:                                      # optional: Karte im selben Kasten
 | `climate` | Heizung; zeigt `current_temperature`, orange bei `hvac_action: heating` |
 | `temperature` | Temperatursensor, falls kein `climate` vorhanden |
 | `ac` | Klimaanlage (eigenes Symbol, Farbe nach Modus); Entität oder Liste |
-| `windows` | Liste mit `entity`, `kind` (`window`, `door`, `roof`), `name`, `icon`; es werden höchstens vier angezeigt |
+| `windows` | Liste mit `entity`, `entity` (offen/zu), `kind` (`window`, `door`, `roof`), `name`, `icon`, `lock`, `lock_icon`; es werden höchstens vier angezeigt |
 | `card` | Beliebige Karte, die unter der Kopfzeile im gleichen Kasten angezeigt wird |
 
-Fenster-Symbole sind rot und erscheinen nur, wenn der Sensor `on` oder `open` meldet. Tippen auf ein Symbol öffnet den Dialog der Entität.
+Fenster-Symbole sind rot und erscheinen nur, wenn der Sensor `on` oder `open` meldet. Mit `lock` (Schloss-Entität `lock.*` oder `binary_sensor`) bekommt eine Tür einen zweiten Status: Ist sie **zu, aber nicht verriegelt**, erscheint ein orangefarbenes offenes Schloss (`mdi:lock-open-variant`); ist sie offen, das rote Türsymbol. `entity` darf dann auch fehlen (nur Schloss-Status). Als nicht verriegelt gelten `unlocked`, `unlocking`, `open`, `jammed` und `on`.
+
+Tippen auf ein Symbol öffnet den Dialog der Entität.
 
 ## Hinweise
 
